@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './App.css';
 import FileExplorer from './components/FileExplorer';
 import FileView from './components/FileView';
@@ -29,11 +29,11 @@ function App() {
   const { gestureRecognizer, detectionResult, predictWebcam } = useGestureRecognition();
   const lastVideoTimeRef = useRef(-1);
 
-  const handleVideoReady = (videoElement) => {
+  const handleVideoReady = useCallback((videoElement) => {
     if (gestureRecognizer) {
       predictWebcam(videoElement, lastVideoTimeRef);
     }
-  };
+  }, [gestureRecognizer, predictWebcam]);
 
   // Effect to detect specific gestures
   useEffect(() => {
