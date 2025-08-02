@@ -1,13 +1,12 @@
-import { useEffect, useState, useRef } from 'react';
-import { GestureRecognizer, FilesetResolver } from '@mediapipe/tasks-vision';
+import { useEffect, useState, useCallback } from 'react';
+import { GestureRecognizer, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
 
-// A custom hook to encapsulate MediaPipe gesture recognition logic
-export const useGestureRecognition = () => {
+export const useGestureRecognition = (canvasRef) => {
   const [gestureRecognizer, setGestureRecognizer] = useState(null);
-  const [detectionResult, setDetectionResult] = useState(null);
-  const runningMode = 'VIDEO';
+  const [lastGesture, setLastGesture] = useState('');
+  let lastVideoTime = -1;
 
-  // Initialize the Gesture Recognizer
+  // 1. Initialize the Gesture Recognizer
   useEffect(() => {
     const createGestureRecognizer = async () => {
       try {
@@ -16,10 +15,10 @@ export const useGestureRecognition = () => {
         );
         const recognizer = await GestureRecognizer.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: '/gesture_recognizer.task', // Path in the public folder
+            modelAssetPath: '/gesture_recognizer.task',
             delegate: 'GPU',
           },
-          runningMode: runningMode,
+          runningMode: 'VIDEO',
           numHands: 2,
         });
         setGestureRecognizer(recognizer);
@@ -28,26 +27,51 @@ export const useGestureRecognition = () => {
         console.error('Error creating gesture recognizer:', error);
       }
     };
-
     createGestureRecognizer();
   }, []);
 
-  // Function to start detection
-  const predictWebcam = (video, lastVideoTimeRef) => {
-    if (!gestureRecognizer || !video.currentTime || video.currentTime === lastVideoTimeRef.current) {
-      window.requestAnimationFrame(() => predictWebcam(video, lastVideoTimeRef));
+  // 2. Main detection loop
+  const predictWebcam = useCallback((video) => {
+    if (!gestureRecognizer || !video || !canvasRef.current) {
       return;
     }
 
-    lastVideoTimeRef.current = video.currentTime;
-    const result = gestureRecognizer.recognizeForVideo(video, Date.now());
-    
-    if (result) {
-        setDetectionResult(result);
+    // Throttle the detection to avoid overwhelming the system
+    if (video.currentTime === lastVideoTime) {
+      requestAnimationFrame(() => predictWebcam(video));
+      return;
     }
 
-    window.requestAnimationFrame(() => predictWebcam(video, lastVideoTimeRef));
-  };
+    lastVideoTime = video.currentTime;
+    const results = gestureRecognizer.recognizeForVideo(video, Date.now());
 
-  return { gestureRecognizer, detectionResult, predictWebcam };
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const drawingUtils = new DrawingUtils(ctx);
+
+    // Draw hand landmarks and connectors
+    if (results.landmarks) {
+      for (const landmarks of results.landmarks) {
+        drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 5 });
+        drawingUtils.drawLandmarks(landmarks, { color: '#FF0000', lineWidth: 2 });
+      }
+    }
+    ctx.restore();
+
+    // Update gesture state only when a gesture is detected
+    if (results.gestures.length > 0) {
+      const topGesture = results.gestures[0][0];
+      if (topGesture.categoryName !== lastGesture) {
+        setLastGesture(topGesture.categoryName);
+      }
+    }
+
+    // Continue the loop
+    requestAnimationFrame(() => predictWebcam(video));
+
+  }, [gestureRecognizer, canvasRef, lastGesture]);
+
+  return { gestureRecognizer, lastGesture, predictWebcam };
 };

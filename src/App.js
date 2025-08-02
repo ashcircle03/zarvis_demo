@@ -26,25 +26,30 @@ const mockFileTree = {
 function App() {
   const [currentDirectory, setCurrentDirectory] = useState(mockFileTree);
   const [clipboardItems, setClipboardItems] = useState([]);
-  const { gestureRecognizer, detectionResult, predictWebcam } = useGestureRecognition();
-  const lastVideoTimeRef = useRef(-1);
+  const canvasRef = useRef(null);
+  const { gestureRecognizer, lastGesture, predictWebcam } = useGestureRecognition(canvasRef);
 
   const handleVideoReady = useCallback((videoElement) => {
-    if (gestureRecognizer) {
-      predictWebcam(videoElement, lastVideoTimeRef);
+    if (gestureRecognizer && canvasRef.current) {
+      // Set canvas dimensions once
+      canvasRef.current.width = videoElement.videoWidth;
+      canvasRef.current.height = videoElement.videoHeight;
+      // Start the prediction loop
+      predictWebcam(videoElement);
     }
   }, [gestureRecognizer, predictWebcam]);
 
-  // Effect to detect specific gestures
+  // Effect to react to specific gestures
   useEffect(() => {
-    if (detectionResult && detectionResult.gestures && detectionResult.gestures.length > 0) {
-      const topGesture = detectionResult.gestures[0][0]; // Get the top gesture
-      if (topGesture.categoryName === 'Closed_Fist') {
-        console.log('Fist detected! Action triggered.');
-        // TODO: Implement action for fist gesture (e.g., select item)
+    if (lastGesture) {
+      console.log(`New gesture detected: ${lastGesture}`);
+      if (lastGesture === 'Closed_Fist') {
+        console.log('Fist action triggered!');
+        // TODO: Implement action for fist gesture
       }
+      // Reset gesture after processing if needed, or handle state changes
     }
-  }, [detectionResult]);
+  }, [lastGesture]);
 
   return (
     <div className="app-container">
@@ -52,7 +57,8 @@ function App() {
       <FileView currentDirectory={currentDirectory} />
       <Clipboard clipboardItems={clipboardItems} />
       <CameraView onVideoReady={handleVideoReady} />
-      <HandSilhouette detectionResult={detectionResult} />
+      {/* Pass the ref to the HandSilhouette component */}
+      <HandSilhouette ref={canvasRef} />
     </div>
   );
 }
