@@ -4,7 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a web-based touchless file management system designed for sterile environments (medical/semiconductor). Users interact with AWS EFS using hand gestures and voice commands through a React.js frontend with MediaPipe integration.
+**PIVOT: Desktop App with Real Mouse Control**
+
+This project has pivoted from a web-based file management system to a desktop application that provides touchless mouse control for computers. Users authenticate via AWS Rekognition facial recognition and control their computer's mouse cursor using hand gestures in sterile environments (medical/semiconductor).
+
+### Key Features (New Direction)
+- **Desktop Application**: Electron-based app with React frontend
+- **Real Mouse Control**: Direct manipulation of OS mouse cursor
+- **Facial Authentication**: AWS Rekognition for secure user login
+- **Subscription Model**: Free tier with ads vs Premium tier
+- **Gesture Recognition**: MediaPipe-powered hand tracking for mouse control
 
 ## Development Commands
 
@@ -40,22 +49,30 @@ npm run lint
   - `DragSelection` - Area selection visualization
 - **Custom Hook**: `useDualHandGesture` - Comprehensive gesture recognition
 
-### Backend (AWS Architecture)
-- **Static Hosting**: CloudFront + S3 (HTTPS 필수 - 카메라 API 접근)
-- **Real-time Communication**: AppSync Real-time Subscriptions (WebSocket)
-- **File Operations**: Lambda + S3 (EFS 대신 S3 사용)
-- **Voice Processing**: S3 + Lambda + AWS Transcribe pipeline
-- **Authentication**: Amazon Cognito
-- **Monitoring**: CloudWatch, X-Ray, Security Hub
-- **Security**: WAF, GuardDuty, VPC, KMS encryption
+### Backend (AWS Architecture - New Direction)
+- **User Authentication**: AWS Rekognition for facial recognition login
+- **User Management**: Amazon Cognito + DynamoDB for user profiles and subscription status
+- **Subscription Management**: Stripe integration via Lambda functions
+- **Advertisement Service**: DynamoDB for ad content + CloudWatch for metrics
+- **API Gateway**: RESTful APIs for authentication, user management, and billing
+- **Monitoring**: CloudWatch, X-Ray for app performance and usage analytics
+- **Security**: KMS encryption, IAM roles, secure credential management
 
-## Key Technologies
+### Native System Integration
+- **Mouse Control**: OS-specific APIs (Windows: user32.dll, macOS: Core Graphics, Linux: X11)
+- **Camera Access**: Native camera permissions and MediaPipe integration
+- **System Tray**: Background operation with system tray icon
+- **Auto-start**: Launch on system boot (optional)
 
-- **MediaPipe**: Real-time hand tracking and gesture recognition (클라이언트 사이드 처리)
-- **React Testing Library**: Testing framework
-- **CloudFront + S3**: Static hosting with HTTPS (카메라 API 접근 필수)
-- **AppSync Real-time**: WebSocket 대신 GraphQL subscriptions 사용
-- **Client-side Processing**: MediaPipe 브라우저 내 처리로 즉각적 반응 (~30ms)
+## Key Technologies (Updated Architecture)
+
+- **Electron**: Cross-platform desktop app framework
+- **React + TypeScript**: Frontend UI framework (reusing existing components)
+- **MediaPipe**: Real-time hand tracking and gesture recognition
+- **Node.js Native Modules**: Mouse control via robotjs or native bindings
+- **AWS SDK**: Rekognition for facial auth, Cognito for user management
+- **Native OS APIs**: Direct system integration for mouse control
+- **Stripe API**: Payment processing for subscription management
 
 ## Development Notes
 
@@ -186,44 +203,152 @@ const handleGestureByArea = (hoveredItemId, clickState) => {
 - ✅ **실시간 시각 피드백**: 드래그 영역 표시, 선택 상태 색상 구분
 - ✅ **폴더 트리 네비게이션**: 클릭(확장/축소), 더블클릭(내용 표시) 구분
 
-### 추후 개선 필요사항 (v2.0)
-- **핀치 정확도 향상**: 개인별 손가락 길이에 따른 적응형 임계값 조정
-- **카메라 각도 자동 조정**: 사용자 키/자세에 따른 최적 앵글 계산
-- **손 인식 영역 최적화**: 배경 노이즈 제거 및 ROI(Region of Interest) 설정
-- **조명 조건 보상**: 다양한 조명 환경에서의 인식률 개선
-- **다중 사용자 대응**: 키 차이에 따른 적응형 인식 시스템
-- **피로도 감소**: 장시간 사용시 손목/어깨 피로 최소화 각도 연구
-- **떨림 보정**: 자연스러운 손 떨림으로 인한 오인식 방지 필터링
-- **음성 명령 통합**: 제스처와 음성의 멀티모달 상호작용
+## Development Roadmap (Desktop App Migration)
 
-## Project Structure
+### Phase 1: Electron Setup & Migration
+- [ ] **Electron Environment Setup**
+  - Install electron, electron-builder, concurrently
+  - Create main.js for Electron main process
+  - Configure package.json for desktop app
+  - Setup hot-reload for development
+
+- [ ] **React App Integration**  
+  - Migrate existing React components to Electron renderer
+  - Configure build process for desktop distribution
+  - Setup IPC (Inter-Process Communication) between main and renderer
+  - Test camera access in Electron environment
+
+### Phase 2: Native Mouse Control
+- [ ] **Mouse Control Implementation**
+  - Install robotjs or alternative mouse control library
+  - Create mouse control service in main process
+  - Map gesture coordinates to screen coordinates
+  - Implement click, drag, scroll functionality
+  - Handle multi-monitor setups
+
+- [ ] **Gesture-to-Mouse Mapping**
+  - Convert pinch gestures to mouse clicks
+  - Map finger movement to cursor movement
+  - Implement scroll gestures (two-finger pinch/spread)
+  - Add right-click gesture (long press or specific finger position)
+
+### Phase 3: AWS Rekognition Authentication
+- [ ] **Facial Recognition Login**
+  - Setup AWS SDK in Electron main process
+  - Create face capture component using webcam
+  - Implement face enrollment process for new users
+  - Build face comparison login flow
+  - Store user face data securely (encrypted local + AWS)
+
+- [ ] **User Management System**
+  - Integrate Amazon Cognito for user sessions
+  - Create user profile management
+  - Implement subscription status tracking
+  - Setup secure token storage
+
+### Phase 4: Subscription & Advertisement System
+- [ ] **User Tier Management**
+  - Create free vs premium user logic
+  - Implement subscription status checking
+  - Setup Stripe payment integration
+  - Build subscription management UI
+
+- [ ] **Advertisement System (Free Users)**
+  - Create ad display component (bottom-right overlay)
+  - Implement ad rotation and scheduling
+  - Setup ad analytics and tracking
+  - Create ad-free experience for premium users
+  - Add "Upgrade to Premium" prompts
+
+### Phase 5: Production Features
+- [ ] **System Integration**
+  - System tray integration with minimize to tray
+  - Auto-start on system boot (optional setting)
+  - Keyboard shortcuts for app control
+  - Multiple workspace/monitor support
+
+- [ ] **Security & Performance**
+  - Implement secure credential storage
+  - Add usage analytics and performance monitoring
+  - Create auto-update mechanism
+  - Setup crash reporting and error tracking
+
+### Phase 6: Distribution & Deployment
+- [ ] **App Packaging**
+  - Configure electron-builder for Windows/macOS/Linux
+  - Create installer packages
+  - Setup code signing certificates
+  - Prepare app store distribution (optional)
+
+- [ ] **Backend Infrastructure**
+  - Deploy AWS backend services
+  - Setup CloudWatch monitoring
+  - Configure API Gateway endpoints
+  - Implement rate limiting and security
+
+### Technical Challenges & Solutions
+- **Camera Access**: Electron provides native camera access without browser restrictions
+- **Mouse Control**: Use robotjs for cross-platform mouse control
+- **Performance**: Optimize gesture recognition to prevent system lag
+- **Security**: Secure storage of biometric data and user credentials
+- **Cross-platform**: Handle OS-specific mouse control differences
+
+## Project Structure (Electron App)
 
 ```
-demo-app/
-├── src/
+gesture-mouse-app/
+├── src/                          # Renderer Process (React)
 │   ├── components/
-│   │   ├── CameraView.tsx        # 웹캠 피드 컴포넌트
-│   │   ├── Clipboard.tsx         # 클립보드 패널
-│   │   ├── DragSelection.tsx     # 드래그 영역 시각화
-│   │   ├── DualCursor.tsx        # 제스처 커서 표시
-│   │   ├── DualHandTracker.tsx   # MediaPipe 손 추적
-│   │   ├── FileExplorer.tsx      # 왼쪽 폴더 트리
-│   │   └── FileView.tsx          # 가운데 파일/폴더 뷰
+│   │   ├── auth/
+│   │   │   ├── FaceLogin.tsx     # AWS Rekognition 얼굴인증
+│   │   │   ├── UserProfile.tsx   # 사용자 프로필 관리
+│   │   │   └── SubscriptionManager.tsx # 구독 관리
+│   │   ├── mouse/
+│   │   │   ├── GestureToMouse.tsx # 제스처-마우스 매핑
+│   │   │   ├── MouseCalibration.tsx # 마우스 캘리브레이션
+│   │   │   └── CursorOverlay.tsx  # 가상 커서 오버레이
+│   │   ├── ads/
+│   │   │   ├── AdBanner.tsx      # 광고 배너 (무료 사용자)
+│   │   │   └── UpgradePrompt.tsx # 프리미엄 업그레이드 안내
+│   │   ├── CameraView.tsx        # 웹캠 피드 (재사용)
+│   │   └── SystemTray.tsx        # 시스템 트레이 UI
 │   ├── hooks/
-│   │   └── useDualHandGesture.ts # 제스처 인식 훅
+│   │   ├── useGestureToMouse.ts  # 제스처→마우스 제어 훅
+│   │   ├── useFaceAuth.ts        # AWS Rekognition 훅
+│   │   ├── useSubscription.ts    # 구독 상태 관리 훅
+│   │   └── useDualHandGesture.ts # 기존 제스처 인식 (재사용)
+│   ├── services/
+│   │   ├── aws-rekognition.ts    # AWS 얼굴인식 서비스
+│   │   ├── user-management.ts    # 사용자 관리 서비스
+│   │   ├── subscription.ts       # 구독/결제 서비스
+│   │   └── analytics.ts          # 사용량 분석 서비스
 │   ├── types/
-│   │   └── FileSystem.ts         # 파일시스템 타입 정의
-│   ├── App.tsx                   # 메인 애플리케이션
-│   ├── App.css                   # 스타일시트
-│   └── index.tsx                 # React 엔트리포인트
-├── public/
-│   └── index.html               # HTML 템플릿
-├── package.json                 # 의존성 및 스크립트
-└── tsconfig.json               # TypeScript 설정
+│   │   ├── User.ts               # 사용자 타입 정의
+│   │   ├── Subscription.ts       # 구독 타입 정의
+│   │   └── MouseControl.ts       # 마우스 제어 타입
+│   └── App.tsx                   # 메인 렌더러 앱
+├── electron/                     # Main Process
+│   ├── main.ts                   # Electron 메인 프로세스
+│   ├── mouse-control.ts          # 네이티브 마우스 제어
+│   ├── system-integration.ts     # 시스템 트레이, 자동시작
+│   ├── ipc-handlers.ts           # IPC 통신 핸들러
+│   └── security.ts               # 보안 및 권한 관리
+├── aws-backend/                  # AWS 백엔드 코드
+│   ├── lambda/
+│   │   ├── face-auth/            # 얼굴인증 Lambda
+│   │   ├── user-management/      # 사용자 관리 Lambda
+│   │   └── subscription/         # 구독관리 Lambda
+│   ├── api-gateway/              # API Gateway 설정
+│   └── cloudformation/           # 인프라 코드
+├── package.json
+├── electron-builder.json         # 앱 패키징 설정
+└── tsconfig.json
 ```
 
-### Key Files
-- **`useDualHandGesture.ts`**: 핀치 감지, 더블클릭, 드래그 모드 결정 등 모든 제스처 로직
-- **`App.tsx`**: 제스처 이벤트 처리, 상태 관리, UI 컴포넌트 조합  
-- **`FileSystem.ts`**: 모의 파일시스템 데이터 및 타입 정의
-- **`DualHandTracker.tsx`**: MediaPipe 초기화 및 실시간 손 추적 처리
+### Key Components (New Architecture)
+- **`main.ts`**: Electron 메인 프로세스, 시스템 권한 관리
+- **`mouse-control.ts`**: robotjs를 이용한 실제 마우스 제어
+- **`FaceLogin.tsx`**: AWS Rekognition 기반 얼굴 인증 UI
+- **`GestureToMouse.tsx`**: 손 제스처를 실제 마우스 동작으로 변환
+- **`useGestureToMouse.ts`**: 제스처-마우스 매핑 로직
+- **`AdBanner.tsx`**: 무료 사용자용 광고 시스템
